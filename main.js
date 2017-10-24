@@ -3,6 +3,8 @@
 const canvas = document.querySelector('canvas')
 const context = canvas.getContext('2d')
 
+const startTime = new Date();
+setInterval( () => document.getElementById('timestamp').innerHTML = Math.floor(new Date().getTime()/1000 - startTime.getTime()/1000), 1000);
 const config = {
   rows: 10,
   columns: 20,
@@ -10,6 +12,8 @@ const config = {
   mineCount: 30,
   separatorLineThickness: 2
 }
+
+document.getElementById('minesLeft').innerHTML = config.mineCount;
 
 function calculateBoardSize(dimension, {cellSize, separatorLineThickness}){
     // calculates the height or width in px of the board

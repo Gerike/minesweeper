@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 /*
   Let's Code BP! - Minesweeper Workshop
@@ -22,54 +22,143 @@
     reveal: Boolean
  */
 
-function generateNewBoard(rowCount , columnCount, mineCountToGenerate){
+
+//Before you go, in the order of the functions in JS does not matter, (I can call a function that I define later in the code) bcs of hoisting. Its a good practice to order your functions from the biggest to the smallest, deepen your knowledge about the code as you read further
+//If you use a competent IDE (sorry not you Notepad++) you can Ctrl + click to a function name to jump on its implementation
+
+function generateNewBoard(rowCount, columnCount, mineCountToGenerate) {
   /*
     IN: rowCount (integer), columnCount (integer), mineCountToGenerate (integer)
     OUT: board (2d array), contains cells (object) {mine: Boolean, Integer}
     DESC: Crerates a board, fills it with mines, and calculates nearby mine counts for cells
   */
 
+  function calculateNearbyMinesForCell(cell, board) {
+    return Object.assign(cell, calculateNearbyMines(cell.x, cell.y, board));
+  }
+
+  function calculateNearbyMinesForRow(row, board) {
+    for (let cell of row) { // "let" binding is like "var" its just a little better... from ES5 using var is bad practice ("let" scope differs from "var")
+      if (!isMine(cell)) {
+        cell = calculateNearbyMinesForCell(cell, board);
+      }
+    }
+  }
+
+  function addMine(x, y) {
+    return board[x][y] = { mine: true, x: x, y: y };
+  }
+
+  function createEmptyArray(rowCount, columnCount) {
+    let board = [];
+    for (let i = 0; i < rowCount; i++) {
+      board.push([]);
+      for (let j = 0; j < columnCount; j++) {
+        board[i].push({ x: i, y: j });
+      }
+    }
+
+    return board;
+  }
+
   // create empty board
+  let board = createEmptyArray(rowCount, columnCount);
 
   // add mines to the board
-  // TODO: write and use generateMineCoordinates function
+  let mineCoordinates = generateMineCoordinates(columnCount, rowCount, mineCountToGenerate);
+  mineCoordinates.map(([x, y]) => addMine(x, y)); //"map" is like a "for" where I can get each element of a collection and do something with it, for every calculated mine, I add a new mine to the board
 
   // calculate nearby mine counts
-  // TODO: write and use calculateNearbyMines function
+  for (let row of board) {
+    calculateNearbyMinesForRow(row, board);
+  }
+
+  return board;
 }
 
-function generateMineCoordinates(columns, rows, mineCountToGenerate){
+function generateMineCoordinates(columns, rows, mineCountToGenerate) {
   /*
     IN: rowCount (integer), columnCount (integer), mineCountToGenerate (integer)
     OUT: mineCoordinates (array), contains coordinate of mines: [[3,4],[4,6]]
     DESC: Crerates an array, that contains the coordinates of all the mines. All mine have to be unique coordinate.
   */
 
-  // generate random coordinates until reach the necessary number of mines.
+  function calculateRandomCoordinate(columns, rows) { //Just generating a random coordinate
+    return [Math.floor(Math.random() * rows), Math.floor(Math.random() * columns)]
+  }
 
-  // check if the new generated coordinate is unique
+  function deepInclude(haystack, needle) { //Array includes wiht real equal not by reference... ([[1,2],[3,4]].includes([1,2]) === false bcs of reference, this will return true in the given case)
+    for (let element of haystack) {
+      if (element[0] === needle[0] && element[1] === needle[1]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  let mineCoordinates = [];
+  let possibleMineCoordinate;
+  for (let i = 0; i < mineCountToGenerate; i++) {   // generate random coordinates until reach the necessary number of mines.
+    do {
+      possibleMineCoordinate = calculateRandomCoordinate(columns, rows);
+    } while (deepInclude(mineCoordinates, possibleMineCoordinate));   // check if the new generated coordinate is unique
+    mineCoordinates.push(possibleMineCoordinate);
+  }
+
+  return mineCoordinates;
 }
 
-function calculateNearbyMines(rowIndex, columnIndex, board){
+function calculateNearbyMines(rowIndex, columnIndex, board) {
   /*
     IN: rowCount (integer), columnCount (integer), board (2d array)
     OUT: cell (object) posible value {"nearbyMines":0..8} or {"mine":true}
     DESC: Creates an object, that contains the information regarding one cell
   */
 
-  // Use getNearbyCells helper function to get all the nearby cells
-  // count the ones that have mines
+  let nearbyMinesCount = 0;
+  for (let cell of getNearbyCells(rowIndex, columnIndex, board)) {   // Use getNearbyCells helper function to get all the nearby cells
+    if (isMine(cell)) { // count the ones that have mines
+      nearbyMinesCount++;
+    }
+  }
+
+  return { nearbyMines: nearbyMinesCount };
 }
 
-function getNearbyCells(rowIndex, columnIndex, board){
+function getNearbyCells(rowIndex, columnIndex, board) {
   /*
     IN: rowIndex (integer), columnIndex (integer), board (2d array)
     OUT: list of cells
     DESC: return cells that share an edge or a corner with the input cell
   */
+
+  let nearbyCells = [];
+  if (board[rowIndex + 1]) {
+    nearbyCells.push(board[rowIndex + 1][columnIndex + 1]);
+    nearbyCells.push(board[rowIndex + 1][columnIndex - 1]);
+    nearbyCells.push(board[rowIndex + 1][columnIndex]);
+  }
+
+  if (board[rowIndex - 1]) {
+    nearbyCells.push(board[rowIndex - 1][columnIndex + 1]);
+    nearbyCells.push(board[rowIndex - 1][columnIndex]);
+    nearbyCells.push(board[rowIndex - 1][columnIndex - 1]);
+  }
+
+  nearbyCells.push(board[rowIndex][columnIndex + 1]);
+  nearbyCells.push(board[rowIndex][columnIndex - 1]);
+
+  //Get every cell, even if its not exists (in the top row there is no top neighbour, but dont care)
+
+  return nearbyCells.filter(cell => cell !== undefined); //Filter out the not existing cells, so only real neighbours remaining
 }
 
-function handleClick(event){
+
+function getNearbyHiddenEmptyCells(rowIndex, columnIndex, board) { //Get neighbours, but only those that is turned down and empty
+  return getNearbyCells(rowIndex, columnIndex, board).filter(isHidden).filter(isEmptyCell);
+}
+
+function handleClick(event) {
   /*
     IN: event left click
     OUT: void
@@ -78,45 +167,112 @@ function handleClick(event){
   */
 
   // use pixelToCoordinates helper to get the coordinate
+  let [x, y] = pixelToCoordinates(event.offsetY, event.offsetX, config);
 
   //use the move function to evaluate the action
+  move(x, y, board);
 
   //render the board
+  render(board, config);
 }
 
-function handleRightClick(event){
+function handleRightClick(event) {
   /*
     IN: event right click
     OUT: void
     DESC: based on the mouse click's place toggle cell.flag if necessary
     SIDEEFFECT: re-renders the board
   */
+
   // hint event.preventDefault() could be useful
+
+  function toggleFlag(x, y, board) {  //If the given cell is flagged as a bomb it will de-flag it. Else it will add a flag for the given cell
+    board[x][y].flag = !board[x][y].flag;
+  }
+
+  event.preventDefault();
+
+  let [x, y] = pixelToCoordinates(event.offsetY, event.offsetX, config);
+
+  toggleFlag(x, y, board);
+  render(board, config);
 }
 
-function move(x, y, board){
+function move(x, y, board) {
   /*
     IN: x (integer), y (integer), board (2d array)
     OUT: board (2d array), contains cells (object) {mine: Boolean, Integer}
     DESC: apply changes to the game state based on the clicked cells content
   */
 
-  // if the cell has a mine, the game is lost
-  // show this cell, reveal all cells
-
-  // if cells has no mines nearby, show nearby cells, use showNearbyCells function
-
-  // show this cell only
+  board[x][y].shouldShow = true; //If we click on a given cell its 100% we want to show it
+  if (isMine(board[x][y])) { //If its a mine then its bad for you
+    showEverything();
+    window.alert("Vesztettél! :(");
+  } else {
+    showNearbyCells(x, y, board);
+  }
+  render(board, config);
 }
 
-function showNearbyCells(x, y, board){
+function turnCell(board, x, y) { //Turn up the cell. Reveal is needed for the recursion.
+  board[x][y].shouldShow = true;
+  board[x][y].reveal = true;
+}
+
+
+function isMine(cell) { //Mine means mine not mine.
+  return cell.mine === true;
+}
+
+function isEmptyCell(cell) { // If there are no nearby mines then this cell is just a filler nobody cares about its existence :(
+  return cell.nearbyMines === 0;
+}
+
+function isHidden(cell) { // We dont declare properties as default, so "shouldShow" property is undefined until its set for true
+  return cell.shouldShow === undefined;
+}
+
+function showNearbyCells(x, y, board) { //Trick starts from here
   /*
     IN: x (integer), y (integer), board (2d array)
     OUT: board or void
     DESC: recrusivley check nearby cells and show them if empty
   */
 
-  // use getNearbyCells from helper
+  for (let cell of getNearbyHiddenEmptyCells(x, y, board)) { //Get every hidden cell that is empty and reveal it.. and then its empty hidden neighbours too
+    if (!isMine(cell)) {
+      turnCell(board, cell.x, cell.y);
+      showNearbyCells(cell.x, cell.y, board);
+    }
+  }
+
+  showReveledCellsBorder(board); //So much empty cells, but we actually need to reveal their non-empty neighbours bcs still nobody cares about empty cells. (If you comment out this line, you will see what I meant as "border")
+}
+
+function showReveledCellsBorder(board) { //Build a border and Mexico will pay for it
+  for (let row of board) {
+    for (let cell of row) {
+      revealNeighbours(cell, board);
+    }
+  }
+}
+
+function revealNeighbours(cell, board) {
+  if (cell.reveal) { //If this is a freshly revealed empty cell
+    cell.reveal = false; //Becomes outdated, bcs we already dealt with it
+    getNearbyCells(cell.x, cell.y, board).filter(cell => !isMine(cell)).map(cell => cell.shouldShow = true); //Reveal every not bomb neighbour. These cells are NOT emnpty, thats the difference.
+  }
+}
+
+
+function showEverything() { //You lost anyway, at least have something
+  for (let i = 0; i < board.length; i++) {
+    for (let j = 0; j < board[0].length; j++) {
+      turnCell(board, i, j);
+    }
+  }
+  render(board, config);
 }
 
 /*

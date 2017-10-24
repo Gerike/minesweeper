@@ -16,6 +16,12 @@
             justify-content: center
 
         }
+
+        #infoPanel {
+            position: absolute;
+            top: 200px;
+        }
+
         img{
             display: none;
         }
@@ -25,6 +31,7 @@
     <img id="mine" src="img/mine.png" alt="Mine!">
     <img id="flag" src="img/flag.png" alt="Flag!">
     <canvas></canvas>
+    <div id="infoPanel">Eltelt idő: <span id="timestamp"></span> Aknák száma: <span id="minesLeft"></span></div>
     <script src="helper.js"></script>
     <script src="render.js"></script>
     <script src="game.js"></script>
